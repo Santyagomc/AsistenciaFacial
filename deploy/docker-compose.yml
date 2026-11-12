@@ -1,0 +1,81 @@
+# Se ejecuta en la VPS desde /opt/asistencia (alli estan .env, datos/ y mariadb/).
+# Solo Caddy publica puertos (80/443). La base y la app quedan en la red interna.
+name: asistencia
+
+services:
+  db:
+    image: mariadb:10.11
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${DB_NAME}
+      MARIADB_USER: ${DB_USER}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      TZ: America/Bogota
+    command:
+      - --event-scheduler=ON              # cierre automatico de clases cada noche
+      - --default-time-zone=-05:00        # hora de Colombia (sin horario de verano)
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --innodb-buffer-pool-size=128M    # VPS pequena
+      - --max-connections=60
+    volumes:
+      - ./mariadb:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  app:
+    build:
+      context: ./app
+      dockerfile: deploy/Dockerfile
+    image: asistencia-app:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DATA_DIR: /datos
+      HOST: 0.0.0.0
+      PORT: "8000"
+      TRUST_PROXY: "1"
+      COOKIE_SECURE: "1"
+      SECRET_KEY: ${SECRET_KEY}
+      ADMIN_USUARIO: ${ADMIN_USUARIO}
+      ADMIN_CLAVE: ${ADMIN_CLAVE}
+      UMBRAL_CONFIANZA: ${UMBRAL_CONFIANZA}
+      ESPERA_MISMO_ROSTRO: ${ESPERA_MISMO_ROSTRO}
+      CAM_INTERVALO_MS: ${CAM_INTERVALO_MS}
+      CAM_RESOLUCION: ${CAM_RESOLUCION}
+      CAM_CALIDAD: ${CAM_CALIDAD}
+      CAM_SIEMPRE_ACTIVA: ${CAM_SIEMPRE_ACTIVA}
+      CAM_POTENCIA_WIFI: ${CAM_POTENCIA_WIFI:-0}
+      CAM_GRIS: ${CAM_GRIS:-0}
+      TZ: America/Bogota
+    volumes:
+      - ./datos:/datos
+    expose:
+      - "8000"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMINIO: ${DOMINIO}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy/data:/data       # certificados HTTPS (no borrar)
+      - ./caddy/config:/config

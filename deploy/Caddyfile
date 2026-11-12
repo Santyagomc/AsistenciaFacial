@@ -1,0 +1,15 @@
+# Proxy inverso con HTTPS automatico (Let's Encrypt, renovacion incluida).
+# DOMINIO llega de /opt/asistencia/.env (por defecto <ip-con-guiones>.sslip.io).
+{$DOMINIO} {
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "same-origin"
+		-Server
+	}
+	# flush_interval -1: entrega el video MJPEG y los WebSocket sin buffer
+	reverse_proxy app:8000 {
+		flush_interval -1
+	}
+}

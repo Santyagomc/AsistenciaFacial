@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Asistencia facial</title>
+<style>
+:root{--bg:#eef2f1;--panel:#fff;--ink:#14231f;--mute:#5d6f69;--line:#d3dcd9;--accent:#0f6b5c;--on:#fff;--soft:#e2ece9;
+ --ok:#1f9d55;--bad:#d64545;--warn:#c98a06;--late:#d9661f;--info:#2f6fb5;--none:#8a9a95}
+@media(prefers-color-scheme:dark){:root{--bg:#0e1715;--panel:#16231f;--ink:#e6efec;--mute:#92a69f;--line:#27382f;--accent:#3cbfa5;--on:#06211b;--soft:#1d2f2a;
+ --ok:#3ecf7e;--bad:#ff6b6b;--warn:#f0b429;--late:#ff9447;--info:#6fa8ef;--none:#6f817b}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Segoe UI",system-ui,sans-serif}
+h2,h3,h4{margin:0;font-family:Georgia,serif;font-weight:600}
+h3{font-size:1.15rem}h4{font-size:1rem}
+button,input,select{font:inherit}
+.hide{display:none!important}
+.btn{background:var(--accent);color:var(--on);border:0;border-radius:8px;padding:.55rem 1rem;cursor:pointer;font-weight:600}
+.btn.g{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn.s{padding:.25rem .6rem;font-size:.85rem}
+.btn.d{background:transparent;color:var(--bad);border:1px solid var(--line)}
+.btn:disabled{opacity:.5;cursor:default}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+input,select{width:100%;padding:.55rem .7rem;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+label{display:block;font-size:.88rem;color:var(--mute);margin:.7rem 0 .2rem}
+#login{min-height:100vh;display:grid;place-items:center;padding:1rem}
+.card,.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:1.2rem}
+.card{width:100%;max-width:380px}
+.err{color:var(--bad);min-height:1.3rem;margin:.5rem 0 0;font-size:.9rem}
+.okmsg{color:var(--ok)}
+header{display:flex;align-items:center;gap:1rem;padding:.7rem 1.2rem;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+header h2{font-size:1.2rem;margin-right:auto}
+nav{display:flex;gap:.2rem;flex-wrap:wrap;order:3;width:100%}
+nav button{background:none;border:0;padding:.45rem .8rem;border-radius:8px;color:var(--mute);cursor:pointer;font-weight:600}
+nav button[aria-selected=true]{background:var(--bg);color:var(--ink)}
+.who{display:flex;align-items:center;gap:.5rem;color:var(--mute);font-size:.92rem}
+.rol{padding:.1rem .55rem;border-radius:99px;font-size:.78rem;font-weight:700;background:var(--soft);color:var(--accent)}
+main{max-width:1180px;margin:0 auto;padding:1.2rem}
+.grid{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:1.2rem;align-items:start}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+.stack>*+*{margin-top:1.2rem}
+.seg{display:flex;gap:.3rem;flex-wrap:wrap;margin-bottom:1rem}
+.seg button{border:1px solid var(--line);background:var(--panel);color:var(--mute);border-radius:99px;padding:.3rem .9rem;cursor:pointer;font-weight:600}
+.seg button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--on)}
+.thumbs{display:flex;gap:.4rem;flex-wrap:wrap;margin:.5rem 0}
+.foto{position:relative}.foto img.t{width:72px;height:72px}
+.foto button{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:none;background:var(--bad);color:#fff;font-size:.85rem;line-height:22px;padding:0;cursor:pointer}
+.foto button:disabled{opacity:.5;cursor:wait}
+.fotos-info{font-size:.85rem;color:var(--muted,#666);margin:.2rem 0 .4rem}
+img.t{width:46px;height:46px;object-fit:cover;border-radius:8px;border:1px solid var(--line);background:var(--soft)}
+.row{display:flex;gap:.7rem;align-items:center;padding:.6rem 0;border-bottom:1px solid var(--line)}
+.row:last-child{border:0}
+.row .i{flex:1;min-width:0}.row .i b{display:block;overflow-wrap:anywhere;font-weight:600}
+.row .i span,.mute{color:var(--mute);font-size:.88rem}
+.row .acts{display:flex;gap:.35rem;flex-wrap:wrap;justify-content:flex-end}
+.row.sel{background:var(--soft);border-radius:8px;padding-left:.5rem;padding-right:.5rem}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:0 .7rem}
+.filtros{display:flex;gap:.7rem;flex-wrap:wrap;align-items:end}
+.filtros>div{min-width:150px}.filtros>div.w{min-width:240px;flex:1}
+.filtros label{margin-top:0}
+.wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+th,td{text-align:left;padding:.45rem .5rem;border-bottom:1px solid var(--line);vertical-align:middle}
+th{color:var(--mute);font-weight:600;font-size:.85rem}
+.tag{display:inline-block;padding:.08rem .55rem;border-radius:99px;font-size:.8rem;font-weight:700;color:#fff;background:var(--none);white-space:nowrap}
+.e-cumple{background:var(--ok)}.e-tardio{background:var(--warn)}.e-demorado{background:var(--late)}
+.e-ausente{background:var(--bad)}.e-justificado{background:var(--info)}.e-sin_registro{background:var(--none)}
+.e-activo,.e-activa,.e-abierto{background:var(--ok)}.e-inactivo,.e-inactiva,.e-cancelado,.e-retirado{background:var(--none)}
+.e-mantenimiento,.e-planeado,.e-cerrado,.e-egresado{background:var(--info)}
+.cuenta{display:flex;flex-wrap:wrap;gap:.4rem 1rem;margin:.6rem 0 0;font-size:.9rem}
+.cuenta span{display:flex;align-items:center;gap:.35rem}
+.cuenta i{width:.7rem;height:.7rem;border-radius:3px;display:inline-block}
+.barra{display:flex;height:8px;border-radius:99px;overflow:hidden;background:var(--line);margin-top:.5rem}
+.barra i{display:block;height:100%}
+details.clase{border:1px solid var(--line);border-radius:10px;margin-top:.8rem;background:var(--panel)}
+details.clase>summary{cursor:pointer;padding:.8rem 1rem;list-style:none;display:grid;grid-template-columns:auto 1fr auto;gap:.2rem 1rem;align-items:center}
+details.clase>summary::-webkit-details-marker{display:none}
+details.clase>summary .cuando{font-family:Georgia,serif;font-weight:600;white-space:nowrap}
+details.clase>summary .pct{font-weight:700;font-size:1.1rem}
+details.clase>summary .barra{grid-column:1/-1;margin:0}
+details.clase[open]>summary{border-bottom:1px solid var(--line)}
+details.clase .cuerpo{padding:.4rem 1rem 1rem}
+td select{padding:.25rem .4rem;width:auto}
+@media(prefers-color-scheme:dark){.tag{color:#0e1715}}
+@media(max-width:600px){details.clase>summary{grid-template-columns:1fr auto}details.clase>summary .cuando{grid-column:1/-1;white-space:normal}}
+/* En vivo: los dos LED de la puerta son el centro de la vista */
+.puerta{display:grid;grid-template-columns:auto 1fr;gap:1.4rem;align-items:center}
+@media(max-width:600px){.puerta{grid-template-columns:1fr}}
+.leds{display:flex;gap:1rem;padding:1rem 1.2rem;border-radius:16px;background:var(--bg);border:1px solid var(--line)}
+.led{width:64px;height:64px;border-radius:50%;background:var(--line);transition:background .2s,box-shadow .2s}
+.led.g.on{background:var(--ok);box-shadow:0 0 26px var(--ok)}.led.r.on{background:var(--bad);box-shadow:0 0 26px var(--bad)}
+@media(prefers-reduced-motion:reduce){.led{transition:none}}
+#vmsg{font-family:Georgia,serif;font-size:1.35rem;font-weight:600;margin:0}
+.chip{display:inline-block;margin:.3rem .3rem 0 0;padding:.15rem .7rem;border-radius:99px;background:var(--bg);border:1px solid var(--line);font-size:.88rem}
+.empty{color:var(--mute);padding:.8rem 0;margin:0}
+.nota{background:var(--soft);border-radius:8px;padding:.7rem .9rem;margin:.8rem 0 0;font-size:.92rem}
+.formacts{display:flex;gap:.5rem;margin-top:1rem}.formacts .btn{flex:1}
+.buscar{margin:.6rem 0}
+/* Video en vivo y estado de la cámara */
+.vivo2{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:1.2rem;align-items:start}
+@media(max-width:820px){.vivo2{grid-template-columns:1fr}}
+.video{position:relative;aspect-ratio:4/3;background:#0b1210;border-radius:12px;overflow:hidden;border:1px solid var(--line)}
+.video img{width:100%;height:100%;object-fit:contain;display:block}
+.vover{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:1.2rem;color:#d9e4e0;font-size:.95rem;background:#0b1210}
+.chip.ok{border-color:var(--ok);color:var(--ok)}.chip.bad{border-color:var(--bad);color:var(--bad)}.chip.info{border-color:var(--info);color:var(--info)}
+.camsel{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin-top:.7rem}
+.camsel select{width:auto}
+.eventos{list-style:none;margin:.4rem 0 0;padding:0;max-height:300px;overflow:auto}
+.eventos li{display:grid;grid-template-columns:auto 1fr;gap:.1rem .7rem;padding:.5rem 0;border-bottom:1px solid var(--line);font-size:.9rem}
+.eventos li:last-child{border:0}
+.eventos time{color:var(--mute);font-variant-numeric:tabular-nums}
+.eventos .d{grid-column:2;color:var(--mute)}
+/* Popups (toasts) de cada escenario de llegada */
+#toasts{position:fixed;top:1rem;right:1rem;z-index:50;display:flex;flex-direction:column;gap:.6rem;width:min(380px,calc(100vw - 2rem))}
+.toast{background:var(--panel);border:1px solid var(--line);border-left:6px solid var(--none);border-radius:12px;padding:.8rem 2.2rem .8rem 1rem;box-shadow:0 8px 24px rgba(0,0,0,.18);position:relative;animation:entra .25s ease-out}
+.toast b{display:block;font-family:Georgia,serif;font-size:1.05rem}
+.toast .n{font-weight:600;margin-top:.15rem}
+.toast p{margin:.25rem 0 0;font-size:.9rem;color:var(--mute)}
+.toast .x{position:absolute;top:.4rem;right:.4rem;background:none;border:0;color:var(--mute);font-size:1.2rem;cursor:pointer;line-height:1;padding:.2rem .4rem}
+.t-ok{border-left-color:var(--ok)}.t-warn{border-left-color:var(--warn)}.t-late{border-left-color:var(--late)}
+.t-bad{border-left-color:var(--bad)}.t-info{border-left-color:var(--info)}
+@keyframes entra{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.toast{animation:none}}
+dialog{border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink);max-width:520px;width:calc(100vw - 2rem);padding:1.2rem}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+.datos{display:grid;grid-template-columns:auto 1fr;gap:.35rem .8rem;margin:.8rem 0;font-size:.95rem}
+.datos dt{color:var(--mute)}.datos dd{margin:0;font-weight:600;overflow-wrap:anywhere}
+code.tk{display:block;padding:.6rem .7rem;background:var(--bg);border:1px solid var(--line);border-radius:8px;font-size:.92rem;overflow-wrap:anywhere;user-select:all}
+</style>
+</head>
+<body>
+
+<section id="login">
+ <form class="card" id="flogin">
+  <h2 style="font-size:1.6rem">Asistencia facial</h2>
+  <p class="mute" style="margin:.2rem 0 0">Ingresa con tu usuario de administrador o docente.</p>
+  <label for="u">Usuario</label><input id="u" autocomplete="username" required>
+  <label for="p">Contraseña</label><input id="p" type="password" autocomplete="current-password" required>
+  <p class="err" id="le" role="alert"></p>
+  <button class="btn" style="width:100%">Entrar</button>
+ </form>
+</section>
+
+<section id="app" class="hide">
+ <header>
+  <h2>Asistencia facial</h2>
+  <div class="who"><span id="who"></span><span class="rol" id="rol"></span></div>
+  <button class="btn g s" id="out">Salir</button>
+  <nav role="tablist" id="nav"></nav>
+ </header>
+ <main>
+
+  <!-- ========== EN VIVO (admin y docente) ========== -->
+  <div id="v-vivo" class="stack hide">
+   <div class="panel puerta">
+    <div class="leds" aria-hidden="true"><div class="led g" id="lg"></div><div class="led r" id="lr"></div></div>
+    <div>
+     <p id="vmsg" role="status" aria-live="polite">Esperando rostros</p>
+     <div id="vaula" class="mute"></div>
+     <div id="vchips"></div>
+     <div class="camsel">
+      <span id="vselw" class="hide"><label for="vsel" class="hide">Cámara</label><select id="vsel" aria-label="Cámara"></select></span>
+      <span id="vforz"></span>
+     </div>
+    </div>
+   </div>
+   <p class="nota hide" id="vaviso"></p>
+   <div class="vivo2">
+    <div class="video"><img id="vvid" alt="Video en vivo de la cámara del aula"><div class="vover" id="vover">Cargando…</div></div>
+    <div class="panel"><h3>Últimos ingresos</h3><ul class="eventos" id="veventos"><li><span class="mute" style="grid-column:1/-1">Aún no hay detecciones en esta sesión.</span></li></ul></div>
+   </div>
+   <div class="panel">
+    <h3 id="vtit">Clase en curso</h3>
+    <div id="vinfo"></div>
+    <div id="vlista"></div>
+   </div>
+  </div>
+
+  <!-- ========== REPORTE (admin: todo; docente: solo sus clases) ========== -->
+  <div id="v-rep" class="stack hide">
+   <div class="panel" id="misgrupos-p">
+    <h3 id="mg-tit">Mis asignaturas</h3>
+    <div id="misgrupos"></div>
+   </div>
+   <div class="panel">
+    <h3>Reporte de asistencia por fecha</h3>
+    <div class="filtros" style="margin-top:.8rem">
+     <div><label for="rd">Desde</label><input id="rd" type="date"></div>
+     <div><label for="rh">Hasta</label><input id="rh" type="date"></div>
+     <div class="w"><label for="rg">Asignatura y grupo</label><select id="rg"></select></div>
+     <button class="btn" id="rgo">Consultar</button>
+     <button class="btn g" id="rhoy">Hoy</button>
+     <button class="btn g" id="rsem">Últimos 7 días</button>
+     <button class="btn g" id="rcsv" disabled>Descargar CSV</button>
+    </div>
+    <p class="err" id="re" role="alert"></p>
+    <div id="rtotal"></div>
+   </div>
+   <div id="rclases"></div>
+  </div>
+
+  <!-- ========== ESTUDIANTES (admin) ========== -->
+  <div id="v-est" class="grid hide">
+   <div class="panel">
+    <h3 id="fe-tit">Registrar estudiante</h3>
+    <label for="e-codigo">Código</label><input id="e-codigo">
+    <div class="two">
+     <div><label for="e-tipo_documento">Tipo doc.</label><select id="e-tipo_documento"><option value="">—</option><option>CC</option><option>TI</option><option>CE</option><option>PA</option><option>PPT</option></select></div>
+     <div><label for="e-numero_documento">Número doc.</label><input id="e-numero_documento"></div>
+    </div>
+    <label for="e-nombres">Nombres</label><input id="e-nombres">
+    <label for="e-apellidos">Apellidos</label><input id="e-apellidos">
+    <label for="e-correo">Correo</label><input id="e-correo" type="email">
+    <div class="two">
+     <div><label for="e-telefono">Teléfono</label><input id="e-telefono"></div>
+     <div><label for="e-fecha_nacimiento">Nacimiento</label><input id="e-fecha_nacimiento" type="date"></div>
+    </div>
+    <label for="e-id_programa">Programa</label><select id="e-id_programa"></select>
+    <div class="two">
+     <div><label for="e-semestre">Semestre</label><input id="e-semestre" type="number" min="1" max="12" value="1"></div>
+     <div><label for="e-estado">Estado</label><select id="e-estado"><option value="activo">Activo</option><option value="inactivo">Inactivo</option><option value="egresado">Egresado</option><option value="retirado">Retirado</option></select></div>
+    </div>
+    <label for="e-fotos" id="e-fotos-l">Fotos del rostro (5 a 8, de frente y con buena luz)</label><input id="e-fotos" type="file" accept="image/*" multiple>
+    <p class="fotos-info" id="e-fotos-info"></p>
+    <div class="thumbs" id="e-pv"></div>
+    <p class="okmsg" id="e-fotos-msg" role="status"></p>
+    <p class="err" id="e-err" role="alert"></p>
+    <div class="formacts"><button class="btn" id="e-save">Guardar estudiante</button><button class="btn g hide" id="e-cancel">Cancelar</button></div>
+   </div>
+   <div class="panel">
+    <h3>Estudiantes (<span id="e-n">0</span>)</h3>
+    <input class="buscar" id="e-q" type="search" placeholder="Buscar por nombre, código o documento" aria-label="Buscar estudiante">
+    <div id="e-list"></div>
+   </div>
+  </div>
+
+  <!-- ========== ACADÉMICO / INFRAESTRUCTURA (admin, CRUD genérico) ========== -->
+  <div id="v-aca" class="hide"><div class="seg" id="aca-seg"></div><div id="aca-box"></div></div>
+  <div id="v-inf" class="hide"><div class="seg" id="inf-seg"></div><div id="inf-box"></div></div>
+
+  <!-- ========== GRUPOS Y HORARIOS (admin) ========== -->
+  <div id="v-gru" class="stack hide">
+   <div id="gru-box"></div>
+   <div class="panel hide" id="hor-p">
+    <h3 id="hor-tit">Horario</h3>
+    <div class="grid" style="margin-top:.6rem">
+     <div>
+      <label for="h-dia">Día</label><select id="h-dia"><option value="1">Lunes</option><option value="2">Martes</option><option value="3">Miércoles</option><option value="4">Jueves</option><option value="5">Viernes</option><option value="6">Sábado</option><option value="7">Domingo</option></select>
+      <div class="two">
+       <div><label for="h-ini">Inicio</label><input id="h-ini" type="time" value="08:00"></div>
+       <div><label for="h-fin">Fin</label><input id="h-fin" type="time" value="10:00"></div>
+      </div>
+      <label for="h-aula">Aula</label><select id="h-aula"></select>
+      <p class="err" id="h-err" role="alert"></p>
+      <button class="btn" id="h-add" style="width:100%">Agregar franja</button>
+     </div>
+     <div id="h-list"></div>
+    </div>
+   </div>
+  </div>
+
+  <!-- ========== MATRÍCULA (admin) ========== -->
+  <div id="v-mat" class="hide">
+   <div class="panel">
+    <h3>Matricular estudiantes en un grupo</h3>
+    <label for="m-g">Grupo</label><select id="m-g"></select>
+    <div id="m-info" class="mute" style="margin-top:.4rem"></div>
+    <input class="buscar" id="m-q" type="search" placeholder="Buscar estudiante" aria-label="Buscar estudiante">
+    <p class="err" id="m-err" role="alert"></p>
+    <div id="m-list"></div>
+   </div>
+  </div>
+
+  <!-- ========== USUARIOS (admin) ========== -->
+  <div id="v-usu" class="grid hide">
+   <div class="panel">
+    <h3 id="u-tit">Crear usuario</h3>
+    <label for="u-usuario">Usuario</label><input id="u-usuario" autocomplete="off">
+    <label for="u-nombre">Nombre completo</label><input id="u-nombre">
+    <label for="u-correo">Correo (opcional)</label><input id="u-correo" type="email">
+    <label for="u-rol">Rol</label><select id="u-rol"><option value="docente">Docente: solo consulta sus clases</option><option value="admin">Administrador: gestiona todo</option></select>
+    <div id="u-act-w" class="hide"><label for="u-activo">Estado</label><select id="u-activo"><option value="1">Activo</option><option value="0">Desactivado</option></select></div>
+    <label for="u-clave" id="u-clave-l">Contraseña (mínimo 8)</label><input id="u-clave" type="password" autocomplete="new-password">
+    <p class="err" id="u-err" role="alert"></p>
+    <div class="formacts"><button class="btn" id="u-save">Crear usuario</button><button class="btn g hide" id="u-cancel">Cancelar</button></div>
+   </div>
+   <div class="panel"><h3>Usuarios</h3><div id="u-list"></div></div>
+  </div>
+
+ </main>
+</section>
+
+<div id="toasts" role="status" aria-live="polite"></div>
+
+<dialog id="dtoken" aria-labelledby="dtoken-t">
+ <h3 id="dtoken-t">Token de la cámara</h3>
+ <p class="mute" style="margin:.4rem 0 0">Escribe estos datos en el portal de configuración de la cámara (red Wi-Fi <b>ASISTENCIA-XXXX</b> → http://192.168.4.1 → Configure WiFi). El token se muestra <b>solo esta vez</b>.</p>
+ <dl class="datos">
+  <dt>Servidor</dt><dd id="dt-srv"></dd>
+  <dt>Puerto</dt><dd id="dt-port"></dd>
+  <dt>Seguridad</dt><dd>2</dd>
+  <dt>Identificador</dt><dd id="dt-id"></dd>
+ </dl>
+ <label for="dt-tk">Token</label><code class="tk" id="dt-tk"></code>
+ <p class="okmsg" id="dt-ok" style="min-height:1.3rem;margin:.4rem 0 0"></p>
+ <div class="formacts"><button class="btn" id="dt-copy">Copiar token</button><button class="btn g" id="dt-close">Cerrar</button></div>
+</dialog>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=t=>String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const iso=d=>d.toLocaleDateString('en-CA');
+const hoy=()=>iso(new Date());
+const DIAS=['','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+const ESTADOS={cumple:'Cumple',tardio:'Tardío',demorado:'Demorado',ausente:'Ausente',justificado:'Justificado',sin_registro:'Sin registro'};
+const METODOS={facial:'Cámara',manual:'Manual',automatico:'Cierre de clase',qr:'QR',rfid:'RFID',codigo_barras:'Código de barras',biometrico:'Biométrico'};
+const COLOR={cumple:'var(--ok)',tardio:'var(--warn)',demorado:'var(--late)',ausente:'var(--bad)',justificado:'var(--info)',sin_registro:'var(--none)'};
+const tag=(e,txt)=>`<span class="tag e-${esc(e)}">${esc(txt??ESTADOS[e]??e)}</span>`;
+const fechaLarga=f=>new Date(f+'T12:00:00').toLocaleDateString('es-CO',{weekday:'short',day:'numeric',month:'short'});
+
+/* ---------- API ---------- */
+async function api(m,u,b){
+ let r;
+ try{r=await fetch(u.startsWith('/fotos')?u:'/api'+u,{method:m,credentials:'same-origin',headers:{'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined})}
+ catch(e){throw new Error('No hay conexión con el servidor. Revisa tu Internet o que el servidor esté encendido.')}
+ const j=await r.json().catch(()=>({}));
+ if(r.status===401&&u!=='/login'&&u!=='/yo'){location.reload();throw new Error('Sesión expirada')}
+ if(!r.ok){
+  if(typeof j.detail==='string')throw new Error(j.detail);
+  if(Array.isArray(j.detail)&&j.detail[0]){const d=j.detail[0];throw new Error('Revisa el campo '+(d.loc||[]).slice(-1)[0]+': '+(d.msg||'valor inválido'))}
+  throw new Error('No se pudo completar la acción.');
+ }
+ return j;
+}
+const L={}; // listas en memoria
+async function cargar(...ents){await Promise.all(ents.map(async e=>{L[e]=await api('GET','/cat/'+e)}))}
+
+/* ---------- sesión y navegación por rol ---------- */
+let YO=null,vista=null;
+const VISTAS={
+ admin:[['vivo','En vivo'],['rep','Reportes'],['est','Estudiantes'],['gru','Grupos y horarios'],['mat','Matrícula'],['aca','Académico'],['inf','Infraestructura'],['usu','Usuarios']],
+ docente:[['rep','Mis clases'],['vivo','En vivo']]
+};
+$('flogin').onsubmit=async ev=>{ev.preventDefault();
+ try{const r=await api('POST','/login',{usuario:$('u').value.trim(),clave:$('p').value});$('p').value='';$('le').textContent='';entrar(r)}
+ catch(e){$('le').textContent=e.message}};
+$('out').onclick=async()=>{try{await api('POST','/logout')}catch(e){}location.reload()};
+function entrar(u){
+ YO=u;$('who').textContent=u.nombre;$('rol').textContent=u.rol==='admin'?'Administrador':'Docente';
+ $('login').classList.add('hide');$('app').classList.remove('hide');
+ $('nav').innerHTML=VISTAS[u.rol].map(([k,t],i)=>`<button role="tab" data-v="${k}" aria-selected="${i===0}">${t}</button>`).join('');
+ $('mg-tit').textContent=u.rol==='admin'?'Grupos del periodo':'Mis asignaturas';
+ ir(VISTAS[u.rol][0][0]);conectaWS();
+}
+$('nav').onclick=e=>{const v=e.target.dataset.v;if(v)ir(v)};
+function ir(v){
+ vista=v;
+ if(v!=='vivo')paraVideo();
+ document.querySelectorAll('#nav button').forEach(b=>b.setAttribute('aria-selected',b.dataset.v===v));
+ ['vivo','rep','est','aca','inf','gru','mat','usu'].forEach(k=>$('v-'+k).classList.toggle('hide',k!==v));
+ ({vivo:pintaVivo,rep:abrirRep,est:abrirEst,aca:()=>abrirSeg('aca'),inf:()=>abrirSeg('inf'),gru:abrirGru,mat:abrirMat,usu:abrirUsu}[v])();
+}
+
+/* ---------- EN VIVO ---------- */
+// Escenario de cada detección -> [título del popup, color]
+const RES={
+ temprano:['Llegó temprano','ok'],a_tiempo:['Llegó a tiempo','ok'],tardio:['Llegó tarde','warn'],demorado:['Llegó demorado','late'],
+ reingreso:['Ya estaba registrado','info'],muy_temprano:['Llegó muy temprano','info'],
+ sin_asignatura:['Sin asignaturas en este horario','bad'],clase_finalizada:['Sin asignaturas en este horario','bad'],
+ no_matriculado:['No matriculado en esta clase','bad'],otra_aula:['Aula equivocada','bad'],
+ estudiante_inactivo:['Estudiante inactivo','bad'],no_identificado:['Persona no registrada','bad'],
+ no_reconocido:['Rostro no reconocido','bad'],dispositivo_invalido:['Cámara no registrada','bad']
+};
+const resInfo=m=>RES[m.resultado]||[m.ok?'Ingreso permitido':'Ingreso denegado',m.ok?'ok':'bad'];
+let tmLed,CAM=null,VIDEO=null,EVENTOS=[];
+function led(ok,msg){
+ $('lg').classList.toggle('on',ok===true);$('lr').classList.toggle('on',ok===false);
+ $('vmsg').textContent=msg;
+ clearTimeout(tmLed);tmLed=setTimeout(()=>{$('lg').classList.remove('on');$('lr').classList.remove('on');$('vmsg').textContent='Esperando rostros'},4000);
+}
+function toast(m){
+ const [t,c]=resInfo(m),box=$('toasts'),el=document.createElement('div');
+ el.className='toast t-'+c;
+ el.innerHTML=`<button class="x" aria-label="Cerrar aviso">×</button><b>${esc(t)}</b>${m.nombre?`<div class="n">${esc(m.nombre)}${m.codigo?` <span class="mute">(${esc(m.codigo)})</span>`:''}</div>`:''}
+  <p>${esc(m.mensaje||'')}</p><p>${esc(m.hora||'')}</p>`;
+ let tm;const quita=()=>{clearTimeout(tm);el.remove()};const arma=()=>{tm=setTimeout(quita,8000)};
+ el.querySelector('.x').onclick=quita;el.onmouseenter=()=>clearTimeout(tm);el.onmouseleave=arma;arma();
+ box.prepend(el);while(box.children.length>4)box.lastChild.remove();
+}
+function pintaEventos(){
+ $('veventos').innerHTML=EVENTOS.length?EVENTOS.map(m=>{const [t,c]=resInfo(m);
+  return `<li><time>${esc((m.hora||'').slice(0,5))}</time><span><span class="tag" style="background:var(--${c==='late'?'late':c==='warn'?'warn':c==='info'?'info':c==='ok'?'ok':'bad'})">${esc(t)}</span> ${esc(m.nombre||'')}</span><span class="d">${esc(m.mensaje||'')}</span></li>`}).join('')
+  :'<li><span class="mute" style="grid-column:1/-1">Aún no hay detecciones en esta sesión.</span></li>';
+}
+function paraVideo(){if(VIDEO){$('vvid').removeAttribute('src');VIDEO=null}}
+function chip(txt,cls){return `<span class="chip ${cls||''}">${esc(txt)}</span>`}
+async function pintaVivo(){
+ let d;try{d=await api('GET','/en-vivo'+(CAM?'?dispositivo='+encodeURIComponent(CAM):''))}catch(e){$('vinfo').innerHTML=`<p class="err">${esc(e.message)}</p>`;return}
+ CAM=d.dispositivo;
+ $('vselw').classList.toggle('hide',d.camaras.length<2);
+ $('vsel').innerHTML=d.camaras.map(c=>`<option value="${esc(c.identificador)}" ${c.identificador===CAM?'selected':''}>${esc(c.nombre)} · ${esc(c.aula)}</option>`).join('');
+ $('vaula').textContent=d.aula?`Cámara ${d.dispositivo} · aula ${d.aula}`:'';
+ $('vaviso').textContent=d.aviso||'';$('vaviso').classList.toggle('hide',!d.aviso);
+ const s=d.estado;
+ if(s){
+  const i=s.info||{};
+  $('vchips').innerHTML=(s.conectada?chip('Conectada','ok'):chip('Desconectada'+(s.ultima_vez?' desde '+s.ultima_vez:''),'bad'))
+   +(s.conectada?(s.activa?chip('Transmitiendo'+(s.fps?` · ${s.fps} fps`:''),'ok'):chip('En reposo (fuera de clase)','info')):'')
+   +(i.fw?chip('Firmware '+i.fw):'')+(i.rssi?chip(`Señal Wi-Fi ${i.rssi} dBm`):'');
+  $('vforz').innerHTML=YO.rol==='admin'&&s.conectada?(s.forzada_min>0
+   ?`<button class="btn g s" data-act="0">Apagar transmisión manual (quedan ${s.forzada_min} min)</button>`
+   :(!s.activa?`<button class="btn g s" data-act="10">Encender 10 min (probar encuadre)</button>`:'')):'';
+ }else{$('vchips').innerHTML='';$('vforz').innerHTML=''}
+ // Video: solo si la cámara transmite y el usuario puede verla
+ let msg='';
+ if(!d.dispositivo)msg='No hay cámaras registradas.';
+ else if(!s.conectada)msg='La cámara está desconectada. Revisa su alimentación y el Wi-Fi del aula (LED rojo parpadeando = sin Wi-Fi; ambos = sin servidor).';
+ else if(!d.video)msg='El video está disponible solo durante tus clases en esta aula.';
+ else if(!s.activa)msg=`Cámara en reposo: transmite desde ${d.min_antes} min antes de cada clase hasta su fin.`;
+ if(msg){paraVideo();$('vover').textContent=msg;$('vover').classList.remove('hide')}
+ else{$('vover').classList.add('hide');if(VIDEO!==CAM){VIDEO=CAM;$('vvid').src='/api/video/'+encodeURIComponent(CAM)+'?t='+Date.now()}}
+ if(!d.clase){$('vtit').textContent='Clase en curso';$('vinfo').innerHTML=`<p class="nota">${esc(d.nota||'Sin clase en curso.')}</p>`;$('vlista').innerHTML='';return}
+ const c=d.clase;
+ $('vtit').textContent=`${c.asignatura} (${c.codigo_grupo})`;
+ $('vinfo').innerHTML=`<p class="mute" style="margin:.2rem 0 0">${esc(c.hora_inicio)} a ${esc(c.hora_fin)}, ${esc(c.aula)}. Docente: ${esc(c.docente||'sin asignar')}</p>${cuenta(c.resumen)}`;
+ $('vlista').innerHTML=tablaEst(c,false);
+}
+$('vsel').onchange=()=>{CAM=$('vsel').value;paraVideo();pintaVivo()};
+$('vvid').onerror=()=>{if(VIDEO){VIDEO=null;setTimeout(()=>{if(vista==='vivo')pintaVivo()},3000)}};
+$('vforz').onclick=async e=>{const m=e.target.dataset.act;if(m===undefined)return;
+ try{await api('POST',`/camaras/${encodeURIComponent(CAM)}/activar`,{minutos:+m});pintaVivo()}catch(x){alert(x.message)}};
+setInterval(()=>{if(vista==='vivo'&&YO)pintaVivo()},8000);
+function conectaWS(){
+ const ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws');
+ ws.onmessage=e=>{try{const m=JSON.parse(e.data);
+  toast(m);EVENTOS.unshift(m);EVENTOS=EVENTOS.slice(0,25);pintaEventos();
+  if(!CAM||m.dispositivo===CAM)led(!!m.ok,resInfo(m)[0]+(m.nombre?': '+m.nombre:''));
+  if(vista==='vivo')pintaVivo()}catch(x){}};
+ ws.onclose=()=>setTimeout(()=>{if(YO)conectaWS()},3000);
+}
+
+/* ---------- REPORTE ---------- */
+let REP=null;
+function cuenta(r){
+ if(!r||!r.total)return '<p class="empty">Sin estudiantes matriculados.</p>';
+ const orden=['cumple','tardio','demorado','justificado','ausente','sin_registro'];
+ return `<div class="cuenta">${orden.filter(k=>r[k]).map(k=>`<span><i style="background:${COLOR[k]}"></i>${ESTADOS[k]}: <b>${r[k]}</b></span>`).join('')}
+  <span>Asistencia: <b>${r.porcentaje??0}%</b> de ${r.total}</span></div>
+  <div class="barra" aria-hidden="true">${orden.map(k=>r[k]?`<i style="width:${100*r[k]/r.total}%;background:${COLOR[k]}"></i>`:'').join('')}</div>`;
+}
+function tablaEst(c,editable){
+ if(!c.estudiantes.length)return '<p class="empty">No hay estudiantes matriculados en este grupo.</p>';
+ const sel=e=>`<select aria-label="Cambiar estado de ${esc(e.nombre)}" data-est="${e.id_estudiante}" data-hor="${c.id_horario}" data-f="${c.fecha}">
+   ${Object.keys(ESTADOS).filter(k=>k!=='sin_registro'||e.estado==='sin_registro').map(k=>`<option value="${k}" ${k===e.estado?'selected':''}>${ESTADOS[k]}</option>`).join('')}</select>`;
+ return `<div class="wrap"><table><thead><tr><th>Código</th><th>Estudiante</th><th>Estado</th><th>Ingreso</th><th>Salida</th><th>Método</th><th>Observación</th></tr></thead><tbody>
+ ${c.estudiantes.map(e=>`<tr><td>${esc(e.codigo)}</td><td>${esc(e.nombre)}</td><td>${editable?sel(e):tag(e.estado)}</td>
+  <td>${esc(e.hora_ingreso||'')}</td><td>${esc(e.hora_salida||'')}</td><td>${esc(METODOS[e.metodo]||e.metodo||'')}</td><td>${esc(e.observaciones||'')}</td></tr>`).join('')}
+ </tbody></table></div>`;
+}
+async function abrirRep(){
+ if(!$('rd').value){$('rd').value=hoy();$('rh').value=hoy()}
+ let g=[];try{g=await api('GET','/mis-grupos')}catch(e){$('misgrupos').innerHTML=`<p class="err">${esc(e.message)}</p>`}
+ const k=$('rg').value;
+ $('rg').innerHTML='<option value="">Todas</option>'+g.map(x=>`<option value="${x.id}">${esc(x.asignatura)} (${esc(x.codigo_grupo)}), ${esc(x.periodo)}</option>`).join('');
+ if(k)$('rg').value=k;
+ $('misgrupos').innerHTML=g.length?g.map(x=>`<div class="row"><div class="i"><b>${esc(x.asignatura)} <span class="mute">${esc(x.cod_asignatura)}, grupo ${esc(x.codigo_grupo)}</span></b>
+  <span>${esc(x.periodo)}, jornada ${esc(x.jornada)}, ${x.matriculados} matriculados${YO.rol==='admin'?', docente: '+esc(x.docente||'sin asignar'):''}</span><br><span>${esc(x.horarios||'Sin horario asignado')}</span></div>${tag(x.estado)}</div>`).join('')
+  :`<p class="empty">${YO.rol==='admin'?'Aún no hay grupos. Créalos en Grupos y horarios.':'Aún no tienes grupos asignados. El administrador los asigna en Grupos y horarios.'}</p>`;
+ consultar();
+}
+async function consultar(){
+ $('re').textContent='';$('rcsv').disabled=true;
+ const q=`/reporte?desde=${$('rd').value}&hasta=${$('rh').value}`+($('rg').value?`&id_grupo=${$('rg').value}`:'');
+ try{REP=await api('GET',q)}catch(e){$('re').textContent=e.message;$('rclases').innerHTML='';$('rtotal').innerHTML='';return}
+ const n=REP.clases.length;
+ $('rtotal').innerHTML=n>1?`<p style="margin:.8rem 0 0">${n} clases en el rango. Total del periodo consultado:</p>${cuenta(REP.total)}`:'';
+ $('rcsv').disabled=!n;
+ $('rclases').innerHTML=n?REP.clases.map((c,i)=>`<details class="clase" ${n<=3?'open':''}>
+  <summary><span class="cuando">${esc(fechaLarga(c.fecha))}, ${esc(c.hora_inicio)} a ${esc(c.hora_fin)}</span>
+   <span><b>${esc(c.asignatura)}</b> <span class="mute">grupo ${esc(c.codigo_grupo)}, ${esc(c.aula)}${YO.rol==='admin'?', '+esc(c.docente||'sin docente'):''}</span></span>
+   <span class="pct">${c.resumen.porcentaje??0}%</span>
+   <div class="barra" aria-hidden="true">${['cumple','tardio','demorado','justificado','ausente','sin_registro'].map(k=>c.resumen[k]?`<i style="width:${100*c.resumen[k]/c.resumen.total}%;background:${COLOR[k]}"></i>`:'').join('')}</div>
+  </summary>
+  <div class="cuerpo">${cuenta(c.resumen)}
+   ${YO.rol==='admin'&&c.resumen.sin_registro?`<p><button class="btn g s" data-cerrar="${i}">Cerrar clase: marcar ausentes a quienes no ingresaron</button></p>`:''}
+   ${tablaEst(c,YO.rol==='admin')}</div></details>`).join('')
+  :`<div class="panel"><p class="empty">No hay clases ${YO.rol==='admin'?'programadas':'tuyas'} en esas fechas. Prueba otro rango o revisa que el periodo esté activo.</p></div>`;
+}
+$('rgo').onclick=consultar;
+$('rhoy').onclick=()=>{$('rd').value=$('rh').value=hoy();consultar()};
+$('rsem').onclick=()=>{const d=new Date();$('rh').value=iso(d);d.setDate(d.getDate()-6);$('rd').value=iso(d);consultar()};
+$('rclases').addEventListener('change',async e=>{
+ const s=e.target;if(!s.dataset.est)return;
+ let obs=null;
+ if(s.value==='justificado'){obs=prompt('Motivo de la justificación (opcional):')||null}
+ try{await api('POST','/asistencias/manual',{id_estudiante:+s.dataset.est,id_horario:+s.dataset.hor,fecha:s.dataset.f,estado:s.value,observaciones:obs});consultar()}
+ catch(x){alert(x.message);consultar()}
+});
+$('rclases').addEventListener('click',async e=>{
+ const i=e.target.dataset.cerrar;if(i===undefined)return;
+ const c=REP.clases[+i];
+ if(!confirm(`¿Marcar como ausentes a los ${c.resumen.sin_registro} estudiantes sin registro en ${c.asignatura}?`))return;
+ try{await api('POST','/clases/cerrar',{id_horario:c.id_horario,fecha:c.fecha});consultar()}catch(x){alert(x.message)}
+});
+$('rcsv').onclick=()=>{
+ const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;
+ const filas=[['Fecha','Inicio','Fin','Asignatura','Grupo','Aula','Docente','Código','Estudiante','Estado','Ingreso','Salida','Método','Observación']];
+ REP.clases.forEach(c=>c.estudiantes.forEach(e=>filas.push([c.fecha,c.hora_inicio,c.hora_fin,c.asignatura,c.codigo_grupo,c.aula,c.docente,e.codigo,e.nombre,ESTADOS[e.estado]||e.estado,e.hora_ingreso,e.hora_salida,METODOS[e.metodo]||e.metodo,e.observaciones])));
+ const blob=new Blob(['\ufeff'+filas.map(f=>f.map(q).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'});
+ const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`asistencia_${REP.desde}_${REP.hasta}.csv`;a.click();URL.revokeObjectURL(a.href);
+};
+
+/* ---------- CRUD GENÉRICO (catálogos, aulas, grupos) ---------- */
+const AI=[['activo','Activo'],['inactivo','Inactivo']];
+const opc=(lista,fn)=>()=>(L[lista]||[]).map(x=>[x.id,fn(x)]);
+const ENT={
+ programas:{t:'Programas',campos:[['codigo','Código'],['nombre','Nombre'],['estado','Estado','sel',AI]],fila:r=>[r.nombre,r.codigo]},
+ asignaturas:{t:'Asignaturas',dep:['programas'],campos:[['codigo','Código'],['nombre','Nombre'],['creditos','Créditos','num'],['semestre','Semestre','num'],['id_programa','Programa','sel',opc('programas',x=>x.nombre),1],['estado','Estado','sel',AI]],
+  fila:r=>[r.nombre,`${r.codigo}, ${r.creditos} créditos, semestre ${r.semestre}, ${r.programa}`]},
+ periodos:{t:'Periodos',campos:[['nombre','Nombre (ej. 2026-2)'],['fecha_inicio','Inicio','date'],['fecha_fin','Fin','date'],['estado','Estado','sel',[['planeado','Planeado'],['activo','Activo'],['cerrado','Cerrado']]]],
+  fila:r=>[r.nombre,`del ${r.fecha_inicio} al ${r.fecha_fin}`],ayuda:'Solo los periodos activos generan clases para la cámara y el reporte.'},
+ jornadas:{t:'Jornadas',campos:[['nombre','Nombre'],['estado','Estado','sel',AI]],fila:r=>[r.nombre,'']},
+ bloques:{t:'Bloques',campos:[['nombre','Nombre'],['estado','Estado','sel',AI]],fila:r=>[r.nombre,'']},
+ tipos_aula:{t:'Tipos de aula',campos:[['nombre','Nombre'],['estado','Estado','sel',AI]],fila:r=>[r.nombre,'']},
+ aulas:{t:'Aulas',dep:['bloques','tipos_aula'],campos:[['nombre','Nombre'],['id_bloque','Bloque','sel',opc('bloques',x=>x.nombre),1],['piso','Piso','num'],['capacidad','Capacidad','num'],['id_tipo_aula','Tipo','sel',opc('tipos_aula',x=>x.nombre),1],['estado','Estado','sel',[['activa','Activa'],['mantenimiento','Mantenimiento'],['inactiva','Inactiva']]]],
+  fila:r=>[`${r.nombre}, ${r.bloque}`,`Piso ${r.piso}, ${r.capacidad} puestos, ${r.tipo}`]},
+ dispositivos:{t:'Dispositivos',dep:['aulas'],campos:[['nombre','Nombre'],['identificador','Identificador (el mismo que se escribe en el portal de la cámara)'],['id_aula','Aula donde está instalado','sel',opc('aulas',x=>`${x.nombre}, ${x.bloque}`),1],['tipo','Tipo','sel',[['camara_facial','Cámara facial'],['lector_qr','Lector QR'],['lector_rfid','Lector RFID'],['biometrico','Biométrico'],['manual','Manual']]],['activo','Estado','sel',[['1','Activo'],['0','Inactivo']]]],
+  fila:r=>[r.nombre,`${r.identificador}, ${r.aula}${r.tipo==='camara_facial'?(r.tiene_token?', con token':', SIN token: no puede conectarse'):''}`],estado:r=>r.activo?'activo':'inactivo',
+  extra:r=>r.tipo==='camara_facial'?`<button class="btn g s" data-tk="${r.id}" data-tkn="${r.tiene_token?1:0}">${r.tiene_token?'Nuevo token':'Generar token'}</button>`:'',
+  ayuda:'Cada cámara se conecta a este servidor con su identificador y su token. La cámara registra ingresos en el aula del dispositivo y transmite solo en las franjas de clase de esa aula.'},
+ grupos:{t:'Grupos',dep:['asignaturas','periodos','jornadas','usuarios'],campos:[['id_asignatura','Asignatura','sel',opc('asignaturas',x=>`${x.nombre} (${x.codigo})`),1],['id_periodo','Periodo','sel',opc('periodos',x=>x.nombre),1],['id_jornada','Jornada','sel',opc('jornadas',x=>x.nombre),1],
+   ['id_usuario_docente','Docente','sel',()=>[['','Sin docente']].concat((L.usuarios||[]).filter(u=>u.rol==='docente'&&u.activo).map(u=>[u.id,u.nombre_completo])),1],['codigo_grupo','Código de grupo (ej. G1)'],['cupo','Cupo','num'],['estado','Estado','sel',[['abierto','Abierto'],['cerrado','Cerrado'],['cancelado','Cancelado']]]],
+  fila:r=>[`${r.asignatura} (${r.codigo_grupo})`,`${r.periodo}, ${r.jornada}, ${r.docente||'sin docente'}, ${r.matriculados}/${r.cupo} matriculados`],extra:r=>`<button class="btn g s" data-gh="${r.id}">Horario</button>`}
+};
+const UNO={programas:['Nuevo programa','programa'],asignaturas:['Nueva asignatura','asignatura'],periodos:['Nuevo periodo','periodo'],jornadas:['Nueva jornada','jornada'],
+ bloques:['Nuevo bloque','bloque'],tipos_aula:['Nuevo tipo de aula','tipo de aula'],aulas:['Nueva aula','aula'],dispositivos:['Nuevo dispositivo','dispositivo'],grupos:['Nuevo grupo','grupo']};
+const SEGS={aca:['programas','asignaturas','periodos','jornadas'],inf:['bloques','tipos_aula','aulas','dispositivos']};
+const segAct={aca:'programas',inf:'bloques'};
+function abrirSeg(v){
+ $(v+'-seg').innerHTML=SEGS[v].map(k=>`<button data-k="${k}" aria-pressed="${k===segAct[v]}">${ENT[k].t}</button>`).join('');
+ $(v+'-seg').onclick=e=>{const k=e.target.dataset.k;if(k){segAct[v]=k;abrirSeg(v)}};
+ crud(segAct[v],$(v+'-box'));
+}
+let EDIT={};
+async function crud(ent,box,onDraw){
+ const E=ENT[ent];
+ try{await cargar(...new Set([ent,...(E.dep||[]).filter(d=>d!=='usuarios')]));if((E.dep||[]).includes('usuarios'))L.usuarios=await api('GET','/usuarios')}
+ catch(e){box.innerHTML=`<p class="err">${esc(e.message)}</p>`;return}
+ const id='f-'+ent,ed=EDIT[ent];
+ const campo=([k,l,tipo,ops,num])=>{
+  const v=ed?ed[k]:'';const fid=`${id}-${k}`;
+  if(tipo==='sel'){const o=typeof ops==='function'?ops():ops;
+   return `<label for="${fid}">${l}</label><select id="${fid}" data-k="${k}" data-num="${num?1:''}">${o.map(([a,b])=>`<option value="${esc(a)}" ${String(v??'')===String(a)?'selected':''}>${esc(b)}</option>`).join('')}</select>`}
+  return `<label for="${fid}">${l}</label><input id="${fid}" data-k="${k}" type="${tipo==='num'?'number':tipo==='date'?'date':'text'}" value="${esc(v??'')}" ${tipo==='num'?'data-num="1"':''}>`;
+ };
+ const lista=L[ent]||[];
+ box.innerHTML=`<div class="grid"><div class="panel"><h3>${ed?'Editar '+UNO[ent][1]:UNO[ent][0]}</h3>
+  ${E.ayuda?`<p class="mute" style="margin:.3rem 0 0">${esc(E.ayuda)}</p>`:''}
+  ${E.campos.map(campo).join('')}<p class="err" id="${id}-err" role="alert"></p>
+  <div class="formacts"><button class="btn" id="${id}-save">${ed?'Guardar cambios':'Crear '+UNO[ent][1]}</button>${ed?`<button class="btn g" id="${id}-cancel">Cancelar</button>`:''}</div></div>
+  <div class="panel"><h3>${E.t} (${lista.length})</h3>
+  ${lista.length?lista.map(r=>{const [a,b]=E.fila(r);const st=E.estado?E.estado(r):r.estado;
+   return `<div class="row ${ed&&ed.id===r.id?'sel':''}"><div class="i"><b>${esc(a)}</b>${b?`<span>${esc(b)}</span>`:''}</div>${st?tag(st,st):''}
+   <div class="acts">${E.extra?E.extra(r):''}<button class="btn g s" data-ed="${r.id}">Editar</button><button class="btn d s" data-del="${r.id}">Eliminar</button></div></div>`}).join('')
+   :`<p class="empty">Aún no hay registros. Crea el primero con el formulario.</p>`}</div></div>`;
+ $(id+'-save').onclick=async()=>{
+  const d={};box.querySelectorAll(`[id^="${id}-"][data-k]`).forEach(x=>{let v=x.value.trim();d[x.dataset.k]=x.dataset.num?(v===''?null:+v):v});
+  if(ent==='dispositivos')d.activo=d.activo==='1';
+  try{if(ed)await api('PUT',`/cat/${ent}/${ed.id}`,d);else await api('POST',`/cat/${ent}`,d);EDIT[ent]=null;crud(ent,box,onDraw)}
+  catch(e){$(id+'-err').textContent=e.message}
+ };
+ if(ed)$(id+'-cancel').onclick=()=>{EDIT[ent]=null;crud(ent,box,onDraw)};
+ box.querySelectorAll('[data-ed]').forEach(b=>b.onclick=()=>{EDIT[ent]=lista.find(r=>r.id==b.dataset.ed);crud(ent,box,onDraw);box.scrollIntoView({behavior:'smooth'})});
+ box.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{
+  if(!confirm('¿Eliminar este registro?'))return;
+  try{await api('DELETE',`/cat/${ent}/${b.dataset.del}`);if(EDIT[ent]&&EDIT[ent].id==b.dataset.del)EDIT[ent]=null;crud(ent,box,onDraw)}catch(e){alert(e.message)}});
+ if(onDraw)onDraw(box);
+}
+
+/* ---------- GRUPOS Y HORARIOS ---------- */
+let grupoH=null;
+function abrirGru(){crud('grupos',$('gru-box'),box=>{
+ box.querySelectorAll("[data-gh]").forEach(b=>b.onclick=()=>{grupoH=+b.dataset.gh;pintaHor();$('hor-p').scrollIntoView({behavior:'smooth'})});
+ if(grupoH)pintaHor();
+})}
+async function pintaHor(){
+ const g=(L.grupos||[]).find(x=>x.id===grupoH);if(!g){$('hor-p').classList.add('hide');return}
+ try{await cargar('horarios','aulas')}catch(e){$('h-err').textContent=e.message;return}
+ $('hor-p').classList.remove('hide');
+ $('hor-tit').textContent=`Horario de ${g.asignatura} (${g.codigo_grupo}), ${g.periodo}`;
+ const k=$('h-aula').value;
+ $('h-aula').innerHTML=L.aulas.filter(a=>a.estado==='activa').map(a=>`<option value="${a.id}">${esc(a.nombre)}, ${esc(a.bloque)} (${a.capacidad} puestos)</option>`).join('');
+ if(k)$('h-aula').value=k;
+ const hs=L.horarios.filter(h=>h.id_grupo===grupoH);
+ $('h-list').innerHTML=hs.length?hs.map(h=>`<div class="row"><div class="i"><b>${esc(h.dia)}, ${esc(h.hora_inicio)} a ${esc(h.hora_fin)}</b><span>${esc(h.aula)}</span></div><button class="btn d s" data-dh="${h.id}">Quitar</button></div>`).join('')
+  :'<p class="empty">Sin franjas. Agrega al menos una para que la cámara reconozca la clase.</p>';
+}
+$('h-add').onclick=async()=>{
+ try{await api('POST','/cat/horarios',{id_grupo:grupoH,id_aula:+$('h-aula').value,dia_semana:+$('h-dia').value,hora_inicio:$('h-ini').value,hora_fin:$('h-fin').value});$('h-err').textContent='';pintaHor()}
+ catch(e){$('h-err').textContent=e.message}
+};
+$('h-list').onclick=async e=>{const id=e.target.dataset.dh;if(!id||!confirm('¿Quitar esta franja del horario?'))return;
+ try{await api('DELETE','/cat/horarios/'+id);pintaHor()}catch(x){alert(x.message)}};
+
+/* ---------- MATRÍCULA ---------- */
+let MAT=[];
+async function abrirMat(){
+ try{await cargar('grupos','horarios')}catch(e){$('m-err').textContent=e.message;return}
+ const k=$('m-g').value;
+ $('m-g').innerHTML=L.grupos.length?L.grupos.map(g=>`<option value="${g.id}">${esc(g.asignatura)} (${esc(g.codigo_grupo)}), ${esc(g.periodo)}</option>`).join(''):'<option value="">Primero crea un grupo</option>';
+ if(k)$('m-g').value=k;
+ cargaMat();
+}
+async function cargaMat(){
+ const g=L.grupos.find(x=>x.id==$('m-g').value);
+ if(!g){$('m-list').innerHTML='<p class="empty">Crea un grupo en Grupos y horarios para poder matricular.</p>';$('m-info').textContent='';return}
+ const hs=L.horarios.filter(h=>h.id_grupo===g.id).map(h=>`${h.dia} ${h.hora_inicio}-${h.hora_fin}`).join(', ');
+ try{MAT=await api('GET','/matriculas?id_grupo='+g.id)}catch(e){$('m-err').textContent=e.message;return}
+ const n=MAT.filter(x=>x.matricula==='activo').length;
+ $('m-info').textContent=`${n} de ${g.cupo} cupos usados. Docente: ${g.docente||'sin asignar'}. Horario: ${hs||'sin horario'}. Grupo ${g.estado}.`;
+ pintaMat();
+}
+function pintaMat(){
+ const q=$('m-q').value.toLowerCase();
+ const l=MAT.filter(x=>!q||(x.nombre+' '+x.codigo).toLowerCase().includes(q));
+ $('m-list').innerHTML=l.length?l.map(x=>{const on=x.matricula==='activo';
+  return `<div class="row"><div class="i"><b>${esc(x.nombre)}</b><span>${esc(x.codigo)}, ${esc(x.programa)}, semestre ${x.semestre}</span></div>
+  <button class="btn ${on?'d':''} s" data-m="${x.id}" data-on="${on?0:1}">${on?'Retirar':'Matricular'}</button></div>`}).join('')
+  :'<p class="empty">No hay estudiantes activos que coincidan.</p>';
+}
+$('m-g').onchange=cargaMat;$('m-q').oninput=pintaMat;
+$('m-list').onclick=async e=>{const id=e.target.dataset.m;if(!id)return;
+ $('m-err').textContent='';
+ try{await api('POST','/matriculas',{id_grupo:+$('m-g').value,id_estudiante:+id,activo:e.target.dataset.on==='1'});await cargar('grupos');cargaMat()}
+ catch(x){$('m-err').textContent=x.message}};
+
+/* ---------- ESTUDIANTES ---------- */
+let EST=[],fotos=[],editE=null;
+const CE=['tipo_documento','numero_documento','nombres','apellidos','correo','telefono','fecha_nacimiento','id_programa','semestre','estado'];
+async function abrirEst(){
+ try{await cargar('programas');EST=await api('GET','/estudiantes')}catch(e){$('e-err').textContent=e.message;return}
+ const k=$('e-id_programa').value;
+ $('e-id_programa').innerHTML=L.programas.filter(p=>p.estado==='activo'||(editE&&p.id===editE.id_programa)).map(p=>`<option value="${p.id}">${esc(p.nombre)}</option>`).join('');
+ if(k)$('e-id_programa').value=k;
+ pintaEst();
+}
+function resize(f){return new Promise(r=>{const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{
+ const s=Math.min(1,640/Math.max(im.width,im.height)),c=document.createElement('canvas');
+ c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);r(c.toDataURL('image/jpeg',.9))};im.src=fr.result};fr.readAsDataURL(f)})}
+// Fotos: al REGISTRAR quedan pendientes y se envian al guardar. Al EDITAR se ven
+// todas las guardadas; las nuevas se suben (y validan) apenas se eligen, y cada
+// una se puede quitar con la X.
+let FOTOS_EST=[];
+function pintaFotos(){
+ const guardadas=FOTOS_EST.map(f=>`<div class="foto"><img class="t" src="${esc(f.url)}" alt="Foto guardada" loading="lazy"><button type="button" data-qf="${esc(f.archivo)}" title="Quitar esta foto" aria-label="Quitar esta foto">✕</button></div>`);
+ const nuevas=fotos.map((s,i)=>`<div class="foto"><img class="t" src="${s}" alt="Foto nueva"><button type="button" data-qn="${i}" title="Quitar" aria-label="Quitar esta foto">✕</button></div>`);
+ $('e-pv').innerHTML=guardadas.concat(nuevas).join('');
+ $('e-fotos-info').textContent=editE?`${FOTOS_EST.length} foto(s) guardada(s). Elige más para agregarlas; la ✕ quita una.`:(fotos.length?`${fotos.length} foto(s) lista(s) para guardar.`:'');
+}
+async function cargaFotosEst(){
+ try{FOTOS_EST=(await api('GET','/estudiantes/'+editE.id+'/fotos')).fotos}catch(x){FOTOS_EST=[];$('e-err').textContent=x.message}
+ pintaFotos();
+}
+$('e-fotos').onchange=async e=>{
+ const nuevas=await Promise.all([...e.target.files].slice(0,8).map(resize));e.target.value='';
+ $('e-fotos-msg').textContent='';$('e-err').textContent='';
+ if(!editE){fotos=fotos.concat(nuevas).slice(0,8);pintaFotos();return}
+ $('e-fotos-msg').textContent='Subiendo y revisando las fotos...';
+ try{const r=await api('POST','/estudiantes/'+editE.id+'/fotos',{fotos:nuevas});$('e-fotos-msg').textContent=r.mensaje;
+  await cargaFotosEst();EST=await api('GET','/estudiantes');pintaEst()}
+ catch(x){$('e-fotos-msg').textContent='';$('e-err').textContent=x.message}
+};
+$('e-pv').onclick=async e=>{
+ const qn=e.target.dataset.qn,qf=e.target.dataset.qf;
+ if(qn!==undefined){fotos.splice(+qn,1);pintaFotos();return}
+ if(qf===undefined||!editE)return;
+ if(!confirm('¿Quitar esta foto? El reconocimiento se actualiza al instante.'))return;
+ e.target.disabled=true;$('e-err').textContent='';$('e-fotos-msg').textContent='';
+ try{await api('DELETE','/estudiantes/'+editE.id+'/fotos/'+encodeURIComponent(qf));$('e-fotos-msg').textContent='Foto quitada.';
+  await cargaFotosEst();EST=await api('GET','/estudiantes');pintaEst()}
+ catch(x){e.target.disabled=false;$('e-err').textContent=x.message}
+};
+function limpiaE(){editE=null;fotos=[];FOTOS_EST=[];['codigo','numero_documento','nombres','apellidos','correo','telefono','fecha_nacimiento','fotos'].forEach(k=>$('e-'+k).value='');
+ $('e-tipo_documento').value='';$('e-semestre').value=1;$('e-estado').value='activo';$('e-pv').innerHTML='';$('e-err').textContent='';
+ $('e-fotos-msg').textContent='';$('e-fotos-info').textContent='';
+ $('e-codigo').disabled=false;$('fe-tit').textContent='Registrar estudiante';$('e-save').textContent='Guardar estudiante';$('e-cancel').classList.add('hide');
+ $('e-fotos-l').textContent='Fotos del rostro (5 a 8, de frente y con buena luz)'}
+$('e-cancel').onclick=()=>{limpiaE();pintaEst()};
+$('e-save').onclick=async()=>{
+ const d={};CE.forEach(k=>d[k]=$('e-'+k).value.trim());d.id_programa=+d.id_programa;d.semestre=+d.semestre;d.fotos=fotos;
+ if(!d.nombres||!d.apellidos||!d.correo||(!editE&&!$('e-codigo').value.trim())){$('e-err').textContent='Completa código, nombres, apellidos y correo.';return}
+ if(!editE&&!fotos.length){$('e-err').textContent='Sube al menos una foto del rostro.';return}
+ if(!d.id_programa){$('e-err').textContent='Crea primero un programa en Académico.';return}
+ $('e-save').disabled=true;
+ try{let r;if(editE)r=await api('PUT','/estudiantes/'+editE.id,{...d,fotos:[]});else r=await api('POST','/estudiantes',{...d,codigo:$('e-codigo').value.trim()});
+  limpiaE();$('e-fotos-msg').textContent=(r&&r.mensaje)?'Guardado. '+r.mensaje:'Guardado.';EST=await api('GET','/estudiantes');pintaEst()}
+ catch(x){$('e-err').textContent=x.message}
+ $('e-save').disabled=false;
+};
+function pintaEst(){
+ const q=$('e-q').value.toLowerCase();
+ const l=EST.filter(s=>!q||[s.nombres,s.apellidos,s.codigo,s.numero_documento].join(' ').toLowerCase().includes(q));
+ $('e-n').textContent=EST.length;
+ $('e-list').innerHTML=l.length?l.map(s=>`<div class="row ${editE&&editE.id===s.id?'sel':''}"><img class="t" src="${esc(s.foto)}" alt="" loading="lazy">
+  <div class="i"><b>${esc(s.nombres)} ${esc(s.apellidos)}</b><span>${esc(s.codigo)}${s.numero_documento?`, ${esc(s.tipo_documento||'')} ${esc(s.numero_documento)}`:''}, ${esc(s.programa)}, sem. ${s.semestre}, ${s.grupos} grupos</span></div>
+  ${tag(s.estado,s.estado)}<div class="acts"><button class="btn g s" data-ee="${s.id}">Editar</button><button class="btn d s" data-de="${s.id}">Eliminar</button></div></div>`).join('')
+  :`<p class="empty">${EST.length?'Ningún estudiante coincide con la búsqueda.':'Aún no hay estudiantes. Registra el primero con el formulario.'}</p>`;
+}
+$('e-q').oninput=pintaEst;
+$('e-list').onclick=async e=>{
+ const ed=e.target.dataset.ee,de=e.target.dataset.de;
+ if(ed){editE=EST.find(s=>s.id==ed);CE.forEach(k=>$('e-'+k).value=editE[k]??'');$('e-codigo').value=editE.codigo;$('e-codigo').disabled=true;
+  fotos=[];FOTOS_EST=[];$('e-fotos').value='';$('e-pv').innerHTML='';$('e-fotos-msg').textContent='';$('e-fotos-info').textContent='Cargando fotos...';
+  $('fe-tit').textContent='Editar estudiante';$('e-save').textContent='Guardar cambios';$('e-cancel').classList.remove('hide');
+  $('e-fotos-l').textContent='Agregar fotos del rostro';$('e-err').textContent='';pintaEst();cargaFotosEst();$('fe-tit').scrollIntoView({behavior:'smooth'})}
+ if(de){const s=EST.find(x=>x.id==de);
+  if(!confirm(`¿Eliminar a ${s.nombres} ${s.apellidos}? También se borran sus fotos, matrículas y asistencias. Si solo dejó de estudiar, mejor cámbialo a Retirado.`))return;
+  try{await api('DELETE','/estudiantes/'+de);if(editE&&editE.id==de)limpiaE();EST=await api('GET','/estudiantes');pintaEst()}catch(x){alert(x.message)}}
+};
+
+/* ---------- USUARIOS ---------- */
+let USU=[],editU=null;
+async function abrirUsu(){try{USU=await api('GET','/usuarios')}catch(e){$('u-err').textContent=e.message;return}pintaUsu()}
+function limpiaU(){editU=null;['usuario','nombre','correo','clave'].forEach(k=>$('u-'+k).value='');$('u-rol').value='docente';$('u-usuario').disabled=false;
+ $('u-act-w').classList.add('hide');$('u-tit').textContent='Crear usuario';$('u-save').textContent='Crear usuario';$('u-cancel').classList.add('hide');
+ $('u-clave-l').textContent='Contraseña (mínimo 8)';$('u-err').textContent=''}
+$('u-cancel').onclick=()=>{limpiaU();pintaUsu()};
+$('u-save').onclick=async()=>{
+ const nombre=$('u-nombre').value.trim(),clave=$('u-clave').value,correo=$('u-correo').value.trim();
+ if(!nombre){$('u-err').textContent='Escribe el nombre completo.';return}
+ try{
+  if(editU)await api('PUT','/usuarios/'+editU.id,{nombre_completo:nombre,correo,rol:$('u-rol').value,activo:$('u-activo').value==='1',clave:clave||null});
+  else{if(clave.length<8){$('u-err').textContent='La contraseña debe tener al menos 8 caracteres.';return}
+   await api('POST','/usuarios',{usuario:$('u-usuario').value.trim(),nombre_completo:nombre,correo,rol:$('u-rol').value,clave})}
+  limpiaU();abrirUsu();
+ }catch(x){$('u-err').textContent=x.message}
+};
+function pintaUsu(){
+ $('u-list').innerHTML=USU.map(u=>`<div class="row ${editU&&editU.id===u.id?'sel':''}"><div class="i"><b>${esc(u.nombre_completo)}</b>
+  <span>${esc(u.usuario)}, ${u.rol==='admin'?'administrador':'docente'}${u.rol==='docente'?`, ${u.grupos} grupos`:''}${u.correo?', '+esc(u.correo):''}</span></div>
+  ${tag(u.activo?'activo':'inactivo',u.activo?'activo':'desactivado')}<div class="acts"><button class="btn g s" data-eu="${u.id}">Editar</button></div></div>`).join('');
+}
+$('u-list').onclick=e=>{const id=e.target.dataset.eu;if(!id)return;
+ editU=USU.find(u=>u.id==id);$('u-usuario').value=editU.usuario;$('u-usuario').disabled=true;$('u-nombre').value=editU.nombre_completo;
+ $('u-correo').value=editU.correo||'';$('u-rol').value=editU.rol;$('u-activo').value=editU.activo?'1':'0';$('u-clave').value='';
+ $('u-act-w').classList.remove('hide');$('u-tit').textContent='Editar usuario';$('u-save').textContent='Guardar cambios';$('u-cancel').classList.remove('hide');
+ $('u-clave-l').textContent='Nueva contraseña (déjala vacía para no cambiarla)';$('u-err').textContent='';pintaUsu()};
+
+/* ---------- TOKEN DE CÁMARA ---------- */
+$('inf-box').addEventListener('click',async e=>{
+ const id=e.target.dataset.tk;if(!id)return;
+ if(e.target.dataset.tkn==='1'&&!confirm('¿Generar un token nuevo? La cámara dejará de conectarse hasta que escribas el nuevo token en su portal.'))return;
+ let r;try{r=await api('POST',`/dispositivos/${id}/token`)}catch(x){alert(x.message);return}
+ $('dt-srv').textContent=location.hostname;$('dt-port').textContent=location.port||(location.protocol==='https:'?'443':'80');
+ $('dt-id').textContent=r.identificador;$('dt-tk').textContent=r.token;$('dt-ok').textContent='';
+ $('dtoken').showModal();abrirSeg('inf');
+});
+$('dt-copy').onclick=async()=>{try{await navigator.clipboard.writeText($('dt-tk').textContent);$('dt-ok').textContent='Token copiado.'}
+ catch(x){$('dt-ok').textContent='Selecciona el token y cópialo con Ctrl+C.'}};
+$('dt-close').onclick=()=>$('dtoken').close();
+
+/* ---------- inicio ---------- */
+api('GET','/yo').then(entrar).catch(()=>{});
+</script>
+</body>
+</html>

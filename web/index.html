@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Asistencia facial · Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b1220;
+    --surface: #121b2e;
+    --border: #223052;
+    --text: #e7ecf6;
+    --muted: #8a96ac;
+    --live: #5b8cff;
+    --green: #34d399;
+    --green-dim: #12261f;
+    --red: #f87171;
+    --red-dim: #2a1518;
+    --idle: #6b7690;
+    --idle-dim: #1a2236;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 20px;
+  }
+
+  .kiosk {
+    width: 100%;
+    max-width: 480px;
+  }
+
+  .top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .top h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+
+  .live {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--idle);
+    transition: background 0.3s ease;
+  }
+
+  .live-dot.on {
+    background: var(--live);
+    box-shadow: 0 0 0 3px rgba(91, 140, 255, 0.18);
+  }
+
+  .video-frame {
+    background: #000;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    aspect-ratio: 4 / 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .video-frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: none;
+  }
+
+  .video-frame img.ready {
+    display: block;
+  }
+
+  .video-placeholder {
+    color: var(--muted);
+    font-size: 13px;
+    text-align: center;
+    padding: 0 24px;
+  }
+
+  .status {
+    margin-top: 14px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: var(--idle-dim);
+    padding: 22px 24px;
+    transition: background 0.25s ease, border-color 0.25s ease;
+  }
+
+  .status.green { background: var(--green-dim); border-color: rgba(52, 211, 153, 0.35); }
+  .status.red { background: var(--red-dim); border-color: rgba(248, 113, 113, 0.35); }
+
+  .status-label {
+    font-size: 12px;
+    color: var(--muted);
+    margin: 0 0 6px;
+  }
+
+  .status-value {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 26px;
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: -0.01em;
+    color: var(--idle);
+  }
+
+  .status.green .status-value { color: var(--green); }
+  .status.red .status-value { color: var(--red); }
+
+  .footer {
+    margin-top: 14px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .footer code {
+    color: #a9b4c9;
+    font-family: 'Inter', sans-serif;
+  }
+</style>
+</head>
+<body>
+
+<div class="kiosk">
+  <div class="top">
+    <h1>Aula · Asistencia facial</h1>
+    <div class="live">
+      <span class="live-dot" id="liveDot"></span>
+      <span id="liveText">conectando</span>
+    </div>
+  </div>
+
+  <div class="video-frame">
+    <img id="video" alt="">
+    <div class="video-placeholder" id="placeholder">Esperando la señal del ESP32-CAM…</div>
+  </div>
+
+  <div class="status" id="statusBox">
+    <p class="status-label">Estado</p>
+    <p class="status-value" id="statusValue">En espera</p>
+  </div>
+
+  <div class="footer">
+    <span>ws://<code id="ipLabel"></code>:81</span>
+    <span id="lastUpdate"></span>
+  </div>
+</div>
+
+<script>
+  // Cambia esta IP por la que muestra el ESP32-CAM en el Monitor Serial
+  const IP_ESP32CAM = "10.156.208.66";
+
+  document.getElementById("ipLabel").textContent = IP_ESP32CAM;
+
+  const socket = new WebSocket("ws://" + IP_ESP32CAM + ":81");
+  socket.binaryType = "blob";
+
+  const video = document.getElementById("video");
+  const placeholder = document.getElementById("placeholder");
+  const liveDot = document.getElementById("liveDot");
+  const liveText = document.getElementById("liveText");
+  const statusBox = document.getElementById("statusBox");
+  const statusValue = document.getElementById("statusValue");
+  const lastUpdate = document.getElementById("lastUpdate");
+
+  function setStatus(kind) {
+    statusBox.classList.remove("green", "red");
+    if (kind === "GREEN") {
+      statusBox.classList.add("green");
+      statusValue.textContent = "Reconocido";
+    } else if (kind === "RED") {
+      statusBox.classList.add("red");
+      statusValue.textContent = "No reconocido";
+    } else {
+      statusValue.textContent = "En espera";
+    }
+    const now = new Date();
+    lastUpdate.textContent = now.toLocaleTimeString();
+  }
+
+  socket.onopen = () => {
+    liveDot.classList.add("on");
+    liveText.textContent = "en vivo";
+  };
+
+  socket.onclose = () => {
+    liveDot.classList.remove("on");
+    liveText.textContent = "desconectado";
+  };
+
+  socket.onerror = () => {
+    liveText.textContent = "error de conexión";
+  };
+
+  socket.onmessage = (evento) => {
+    if (typeof evento.data === "string") {
+      if (evento.data.startsWith("STATUS:")) {
+        setStatus(evento.data.split(":")[1]);
+      }
+      return;
+    }
+
+    const url = URL.createObjectURL(evento.data);
+    video.onload = () => URL.revokeObjectURL(url);
+    video.src = url;
+    video.classList.add("ready");
+    placeholder.style.display = "none";
+  };
+</script>
+
+</body>
+</html>
